@@ -110,24 +110,25 @@ function handleChipClick() {
 // Function to handle search navigation safely
 function navigateToSearch() {
   const { mindfulState } = window.mindfulYoutube.state;
-  mindfulState.searchPerformed = true;
+  // mindfulState.searchPerformed = true;
 
   // Try to focus the search input if it exists
-  const searchInput = document.querySelector("input#search");
+  const searchInput = document.querySelector("input.ytSearchboxComponentInput");
+  console.log(searchInput);
 
   if (searchInput) {
     // If search input exists, focus it
     searchInput.focus();
-    window.mindfulYoutube.ui.showHomeContent();
+    // window.mindfulYoutube.ui.showHomeContent();
   } else {
     // Alternative approach: Click on the search icon/button
     const searchButton =
       document.querySelector("button#search-icon-legacy") ||
       document.querySelector("ytd-searchbox");
-
+    console.log(searchButton);
     if (searchButton) {
       searchButton.click();
-      window.mindfulYoutube.ui.showHomeContent();
+      // window.mindfulYoutube.ui.showHomeContent();
     } else {
       // Last resort: Redirect to search page
       window.location.href = "https://www.youtube.com/results?search_query=";
@@ -135,9 +136,9 @@ function navigateToSearch() {
   }
 
   // Start timer if time limit is set
-  if (mindfulState.timeLimit > 0 && !mindfulState.startTime) {
-    window.mindfulYoutube.timer.startWatchTimer();
-  }
+  // if (mindfulState.timeLimit > 0 && !mindfulState.startTime) {
+  //   window.mindfulYoutube.timer.startWatchTimer();
+  // }
 }
 
 // Export the functions for use in other modules

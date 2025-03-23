@@ -66,8 +66,16 @@
   font-family: "YouTube Sans", "Roboto", sans-serif;
   cursor: pointer;
   transition: background-color 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
+.mindful-buttons button svg {
+  width: 2rem;
+  height: 2rem;
+  font-size: 2rem;
+}
 .mindful-buttons button:hover {
   background-color: var(--yt-spec-brand-button-background-hover, #d00);
   transform: translateY(-1px);
