@@ -9,6 +9,7 @@
     intentSet: false,
     intentDescription: "",
     favorites: {}, // Object to store favorites by category
+    youtubeRecommendedCategories: [], // Store YouTube's recommended categories
   };
 
   // Load user settings from storage
@@ -49,6 +50,14 @@
 
     // Detect YouTube's theme (light/dark mode)
     detectYouTubeTheme();
+
+    // Try to extract YouTube's recommended categories
+    if (mindfulState.youtubeRecommendedCategories.length === 0) {
+      // We'll attempt to extract categories with a slight delay to ensure the DOM is loaded
+      setTimeout(() => {
+        extractYouTubeCategories();
+      }, 1000);
+    }
 
     // Set up listener for video pages to allow adding to favorites
     if (window.location.pathname.includes("/watch")) {
@@ -245,20 +254,36 @@
 
   // Generate HTML for category checkboxes
   function getCategoryCheckboxesHTML() {
-    const popularCategories = [
-      "Music",
-      "Education",
-      "Science",
-      "Technology",
-      "Cooking",
-      "Fitness",
-      "Productivity",
-      "Art",
-    ];
+    // Try to get YouTube categories first
+    let categories = [];
+
+    // Use stored YouTube categories if available
+    if (mindfulState.youtubeRecommendedCategories.length > 0) {
+      categories = mindfulState.youtubeRecommendedCategories;
+    } else {
+      // Try to extract them now
+      extractYouTubeCategories();
+
+      if (mindfulState.youtubeRecommendedCategories.length > 0) {
+        categories = mindfulState.youtubeRecommendedCategories;
+      } else {
+        // Fallback to default categories if no YouTube chips are found
+        categories = [
+          "Music",
+          "Education",
+          "Science",
+          "Technology",
+          "Cooking",
+          "Fitness",
+          "Productivity",
+          "Art",
+        ];
+      }
+    }
 
     // Combine with any custom categories
     const allCategories = [
-      ...new Set([...popularCategories, ...mindfulState.customCategories]),
+      ...new Set([...categories, ...mindfulState.customCategories]),
     ];
 
     return allCategories
@@ -323,11 +348,44 @@
     }
   }
 
+  // Helper function to extract YouTube recommendation chips
+  function extractYouTubeCategories() {
+    const youtubeChips = Array.from(
+      document.querySelectorAll("#chips yt-chip-cloud-chip-renderer")
+    );
+
+    if (youtubeChips.length > 0) {
+      mindfulState.youtubeRecommendedCategories = youtubeChips
+        .map((chip) => {
+          // Get the text content of the chip
+          const text = chip.firstElementChild.textContent.trim();
+          // Skip "All" and empty chips
+          if (text && text !== "All") {
+            return text;
+          }
+          return null;
+        })
+        .filter(Boolean); // Remove null values
+    }
+
+    // If we found categories, save them
+    if (mindfulState.youtubeRecommendedCategories.length > 0) {
+      saveSettings();
+    }
+
+    return mindfulState.youtubeRecommendedCategories;
+  }
+
   // Create MutationObserver to handle dynamic content loading
   function createObserver() {
     const observer = new MutationObserver((mutations) => {
       hideAllTab();
       setupChipClickListeners();
+
+      // Extract YouTube categories if we haven't already
+      if (mindfulState.youtubeRecommendedCategories.length === 0) {
+        extractYouTubeCategories();
+      }
 
       // Only hide and show mindfulness message if no intentional browsing detected
       if (!mindfulState.categorySelected && !mindfulState.searchPerformed) {
@@ -513,6 +571,14 @@
     const contentContainer = document.querySelector(
       "ytd-rich-grid-renderer #contents"
     );
+    const originalChipsWrapper = document.querySelector(
+      "ytd-feed-filter-chip-bar-renderer"
+    );
+
+    if (originalChipsWrapper) {
+      originalChipsWrapper.style.display = "none";
+    }
+
     if (contentContainer) {
       contentContainer.style.display = "none";
 
@@ -530,6 +596,13 @@
     const contentContainer = document.querySelector(
       "ytd-rich-grid-renderer #contents"
     );
+    const originalChipsWrapper = document.querySelector(
+      "ytd-feed-filter-chip-bar-renderer"
+    );
+
+    if (originalChipsWrapper) {
+      originalChipsWrapper.style.display = "none";
+    }
     if (contentContainer) {
       contentContainer.style.display = "flex";
     }
@@ -544,7 +617,7 @@
   function hideAllTab() {
     const allChips = document.querySelectorAll("yt-chip-cloud-chip-renderer");
     allChips.forEach((chip) => {
-      if (chip.textContent.trim() === "All") {
+      if (chip.firstElementChild.textContent.trim() === "All") {
         chip.style.display = "none";
       }
     });
@@ -860,10 +933,30 @@
           // Show favorites grid
           showFavoritesGrid(category);
         } else {
-          // No favorites yet, do a search
-          window.location.href = `https://www.youtube.com/results?search_query=${encodeURIComponent(
-            category
-          )}`;
+          // Find the corresponding YouTube chip and click it if possible
+          const youtubeChips = Array.from(
+            document.querySelectorAll("#chips yt-chip-cloud-chip-renderer")
+          );
+          const matchingChip = youtubeChips.find(
+            (ytChip) => ytChip.firstElementChild.textContent.trim() === category
+          );
+
+          if (matchingChip) {
+            // Simulate a click on the YouTube chip
+            matchingChip.click();
+            mindfulState.categorySelected = true;
+            showHomeContent();
+
+            // Start timer if time limit is set
+            if (mindfulState.timeLimit > 0 && !mindfulState.startTime) {
+              startWatchTimer();
+            }
+          } else {
+            // Fall back to the old behavior if no matching chip is found
+            window.location.href = `https://www.youtube.com/results?search_query=${encodeURIComponent(
+              category
+            )}`;
+          }
         }
       });
     });
@@ -943,20 +1036,36 @@
 
   // Get HTML for popular category chips
   function getPopularCategoriesHTML() {
-    const popularCategories = [
-      "Music",
-      "Education",
-      "Science",
-      "Technology",
-      "Cooking",
-      "Fitness",
-      "Productivity",
-      "Art",
-    ];
+    // Try to get YouTube categories first
+    let categories = [];
+
+    // Use stored YouTube categories if available
+    if (mindfulState.youtubeRecommendedCategories.length > 0) {
+      categories = mindfulState.youtubeRecommendedCategories;
+    } else {
+      // Try to extract them now
+      extractYouTubeCategories();
+
+      if (mindfulState.youtubeRecommendedCategories.length > 0) {
+        categories = mindfulState.youtubeRecommendedCategories;
+      } else {
+        // Fallback to default categories if no YouTube chips are found
+        categories = [
+          "Music",
+          "Education",
+          "Science",
+          "Technology",
+          "Cooking",
+          "Fitness",
+          "Productivity",
+          "Art",
+        ];
+      }
+    }
 
     // Combine with any custom categories
     const allCategories = [
-      ...new Set([...popularCategories, ...mindfulState.customCategories]),
+      ...new Set([...categories, ...mindfulState.customCategories]),
     ];
 
     // Highlight categories that have favorites with a star
